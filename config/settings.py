@@ -140,3 +140,11 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# TEMPORARY: Create superuser on startup if none exists
+import os
+if os.environ.get('CREATE_SUPERUSER'):
+    from django.contrib.auth.models import User
+    if not User.objects.filter(username='cloud_admin').exists():
+        User.objects.create_superuser('cloud_admin', 'admin@otuuse.com', 'OtuuseCloud2026!')
+        print("✅ Cloud Admin 'cloud_admin' created!")
