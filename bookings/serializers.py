@@ -10,6 +10,11 @@ class BookingSerializer(serializers.ModelSerializer):
     # This lets us see the service name in the JSON instead of just an ID number
     service_name = serializers.CharField(source='service.name', read_only=True) 
 
+    def validate_service(self, service):
+        if not service.is_active:
+            raise serializers.ValidationError("This service is currently unavailable.")
+        return service
+
     class Meta:
         model = Booking
         fields = [
