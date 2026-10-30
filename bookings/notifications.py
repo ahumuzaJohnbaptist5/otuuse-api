@@ -35,7 +35,7 @@ def send_driver_welcome_email(driver_id):
     driver = Driver.objects.select_related("user").filter(pk=driver_id).first()
     if not driver or not driver.user.email:
         logger.warning("Driver %s has no email for registration notice", driver_id)
-        return
+        return False
     name = driver.user.get_full_name() or driver.user.username
     message = (
         f"Hello {name},\n\n"
@@ -50,16 +50,9 @@ def send_driver_welcome_email(driver_id):
     try:
         send_mail("Welcome to OTUUSE - Driver Registration", message,
                   settings.DEFAULT_FROM_EMAIL, [driver.user.email], fail_silently=False)
+        return True
     except Exception:
         logger.exception("Driver welcome email failed for driver %s", driver_id)
+        return False
 
 
-def send_driver_welcome_email(driver_id):
-    from .models import Driver
-    driver = Driver.objects.select_related("user").filter(pk=driver_id).first()
-    if not driver or not driver.user.email:
-        return
-    try:
-        send_mail("Welcome to OTUUSE", "You have been registered as an OTUUSE driver. Your account is pending activation.", settings.DEFAULT_FROM_EMAIL, [driver.user.email], fail_silently=False)
-    except Exception:
-        logger.exception("Welcome notification failed for driver %s", driver_id)

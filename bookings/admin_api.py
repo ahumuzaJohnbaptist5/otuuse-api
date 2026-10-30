@@ -82,6 +82,21 @@ class DriverListView(StaffView):
         } for d in Driver.objects.select_related("user").order_by("id")])
 
 
+class DriverWelcomeResendView(StaffView):
+    def post(self, request, driver_id):
+        from django.conf import settings
+        from django.shortcuts import get_object_or_404
+        from .notifications import send_driver_welcome_email
+        driver = get_object_or_404(Driver.objects.select_related("user"), pk=driver_id)
+        if not driver.user.email:
+            return Response({"detail": "This driver has no email address."}, status=400)
+        if settings.EMAIL_BACKEND != "django.core.mail.backends.smtp.EmailBackend":
+            return Response({"detail": "SMTP email is not configured on the server."}, status=503)
+        if send_driver_welcome_email(driver.id):
+            return Response({"detail": "Welcome email accepted by the configured SMTP server."})
+        return Response({"detail": "Email could not be sent. Check the backend email logs."}, status=502)
+
+
 class ServiceAdminListView(StaffView):
     def get(self, request):
         return Response(list(Service.objects.values("id", "name", "is_active", "base_price_ugx", "per_km_ugx").order_by("id")))
