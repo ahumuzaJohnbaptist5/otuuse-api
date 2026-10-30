@@ -1,4 +1,5 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
+from django.db import transaction
 from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
@@ -51,6 +52,28 @@ class BookingListView(StaffView):
 
 
 class DriverListView(StaffView):
+    def post(self, request):
+        from .notifications import send_driver_welcome_email
+        name = str(request.data.get("name", "")).strip()
+        email = str(request.data.get("email", "")).strip().lower()
+        phone = str(request.data.get("phone", "")).strip()
+        vehicle_type = str(request.data.get("vehicle_type", "")).strip()
+        if not name or not phone or not vehicle_type or not serializers.EmailField().run_validation(email):
+            return Response({"detail": "Name, valid email, phone and vehicle type are required."}, status=400)
+        User = get_user_model()
+        if User.objects.filter(email__iexact=email).exists():
+            return Response({"detail": "Email already registered."}, status=400)
+        with transaction.atomic():
+            username = "driver_" + __import__("uuid").uuid4().hex[:20]
+            first, _, last = name.partition(" ")
+            user = User.objects.create_user(username=username, email=email, first_name=first,
+                                            last_name=last, password=None, is_active=False)
+            driver = Driver.objects.create(user=user, phone=phone, vehicle_type=vehicle_type,
+                                           license_number=str(request.data.get("license_number", ""))[:50],
+                                           is_electric=request.data.get("is_electric") is True)
+            transaction.on_commit(lambda: send_driver_welcome_email(driver.id))
+        return Response({"id": driver.id, "detail": "Driver registered; welcome email attempted."}, status=201)
+
     def get(self, request):
         return Response([{
             "id": d.id, "name": d.user.get_full_name() or d.user.username,
