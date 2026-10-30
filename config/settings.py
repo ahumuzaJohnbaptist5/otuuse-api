@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Otuuse apps
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "bookings",
 ]
