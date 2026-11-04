@@ -152,3 +152,8 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@otuuse.local")
 EMAIL_TIMEOUT = 15
+
+# Limit anonymous attempts to query private booking status tokens.
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_RATES": {"booking_tracking": "30/hour"},
+}
