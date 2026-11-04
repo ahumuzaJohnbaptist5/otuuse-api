@@ -106,10 +106,11 @@ class BookingUpdateView(StaffView):
     def patch(self, request, booking_id):
         from django.db import transaction
         from django.shortcuts import get_object_or_404
-        from .notifications import send_assignment_email
+        from .notifications import send_assignment_email, send_booking_status_email
         with transaction.atomic():
             booking = get_object_or_404(Booking.objects.select_for_update(), pk=booking_id)
             old_driver = booking.driver_id
+            old_status = booking.status
             if "driver_id" in request.data:
                 driver_id = request.data["driver_id"]
                 if driver_id in ("", None):
@@ -123,10 +124,15 @@ class BookingUpdateView(StaffView):
                 booking.status = request.data["status"]
             if booking.driver_id and old_driver != booking.driver_id and "status" not in request.data:
                 booking.status = Booking.Status.ASSIGNED
-            booking.save()
+            changed = booking.driver_id != old_driver or booking.status != old_status
+            if changed:
+                booking.save()
             if booking.driver_id and old_driver != booking.driver_id:
                 bid, did = booking.id, booking.driver_id
                 transaction.on_commit(lambda: send_assignment_email(bid, did))
+            elif booking.driver_id and booking.status != old_status:
+                bid, did, new_status = booking.id, booking.driver_id, booking.status
+                transaction.on_commit(lambda: send_booking_status_email(bid, did, new_status))
         return Response({"id": booking.id, "status": booking.status, "driver_id": booking.driver_id})
 
 

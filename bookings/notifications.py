@@ -56,3 +56,29 @@ def send_driver_welcome_email(driver_id):
         return False
 
 
+
+def send_booking_status_email(booking_id, driver_id, new_status):
+    """Notify the assigned driver of a status change without exposing a tracking token."""
+    booking = Booking.objects.select_related("driver__user", "service").filter(
+        pk=booking_id, driver_id=driver_id, status=new_status
+    ).first()
+    if not booking or not booking.driver.user.email:
+        return False
+    driver = booking.driver.user
+    message = (
+        f"Hello {driver.get_full_name() or driver.username},\n\n"
+        f"OTUUSE booking #{booking.id} has changed to {booking.get_status_display()}.\n"
+        f"Service: {booking.service.name}\n"
+        f"Pickup: {booking.pickup}\n"
+        f"Destination: {booking.destination}\n\n"
+        "Please contact OTUUSE administration if you need clarification.\n"
+    )
+    try:
+        send_mail(
+            f"OTUUSE booking #{booking.id}: {booking.get_status_display()}",
+            message, settings.DEFAULT_FROM_EMAIL, [driver.email], fail_silently=False,
+        )
+        return True
+    except Exception:
+        logger.exception("Driver status email failed for booking %s", booking_id)
+        return False
