@@ -13,4 +13,5 @@ urlpatterns = [
     path('admin/services/', admin_api.ServiceAdminListView.as_view()),
     path('services/', views.ServiceList.as_view(), name='service-list'),
     path('bookings/', views.BookingCreate.as_view(), name='booking-create'),
+    path('bookings/track/', views.BookingTracking.as_view(), name='booking-track'),
 ]
