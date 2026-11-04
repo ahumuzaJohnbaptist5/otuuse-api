@@ -25,3 +25,20 @@ class BookingTrackingTests(TestCase):
     def test_invalid_token_cannot_access_booking(self):
         response = self.client.post("/api/bookings/track/", {"tracking_token": "invalid"}, format="json")
         self.assertEqual(response.status_code, 404)
+
+    def test_tracking_reflects_updated_booking_status(self):
+        created = self.client.post("/api/bookings/", {
+            "customer_name": "Customer", "phone": "0700000000",
+            "service": self.service.pk, "pickup": "Campus",
+            "destination": "Town"
+        }, format="json")
+        from .models import Booking
+        booking = Booking.objects.get(pk=created.data["id"])
+        booking.status = Booking.Status.ASSIGNED
+        booking.save()
+        tracked = self.client.post("/api/bookings/track/", {
+            "tracking_token": created.data["tracking_token"]
+        }, format="json")
+        self.assertEqual(tracked.status_code, 200)
+        self.assertEqual(tracked.data["status"], "ASSIGNED")
+        self.assertNotIn("driver", tracked.data)
